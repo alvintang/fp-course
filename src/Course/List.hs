@@ -76,8 +76,9 @@ headOr ::
   a
   -> List a
   -> a
-headOr =
-  error "todo: Course.List#headOr"
+headOr = \a -> \la -> case la of
+    Nil -> a
+    x:.xs -> x
 
 -- | The product of the elements of a list.
 --
@@ -92,8 +93,9 @@ headOr =
 product ::
   List Int
   -> Int
-product =
-  error "todo: Course.List#product"
+product l = case l of
+  Nil -> 1
+  x:.xs -> x * product xs
 
 -- | Sum the elements of the list.
 --
@@ -107,8 +109,9 @@ product =
 sum ::
   List Int
   -> Int
-sum =
-  error "todo: Course.List#sum"
+sum l = case l of
+  Nil -> 0
+  x:.xs -> x + sum xs
 
 -- | Return the length of the list.
 --
@@ -119,8 +122,9 @@ sum =
 length ::
   List a
   -> Int
-length =
-  error "todo: Course.List#length"
+length l = case l of
+  Nil -> 0
+  x:.xs -> 1 + length xs
 
 -- | Map the given function on each element of the list.
 --
@@ -134,8 +138,9 @@ map ::
   (a -> b)
   -> List a
   -> List b
-map =
-  error "todo: Course.List#map"
+map = \a2b -> \la -> case la of
+  Nil -> Nil
+  x:.xs -> (a2b x) :. map a2b xs
 
 -- | Return elements satisfying the given predicate.
 --
@@ -151,8 +156,9 @@ filter ::
   (a -> Bool)
   -> List a
   -> List a
-filter =
-  error "todo: Course.List#filter"
+filter = \a2b -> \la -> case la of
+  Nil -> Nil
+  x:.xs -> if a2b x then x :. filter a2b xs else filter a2b xs
 
 -- | Append two lists to a new list.
 --
@@ -170,8 +176,13 @@ filter =
   List a
   -> List a
   -> List a
-(++) =
-  error "todo: Course.List#(++)"
+(++) la1 la2 = case la1 of
+  Nil -> la2
+  n :. ns -> n :. ns ++ la2
+-- (++) Nil la2  = la2
+-- (++) (l:.ls) la2 = l :. ls ++ la2
+
+
 
 infixr 5 ++
 
@@ -188,8 +199,7 @@ infixr 5 ++
 flatten ::
   List (List a)
   -> List a
-flatten =
-  error "todo: Course.List#flatten"
+flatten lla = foldRight (++) Nil lla
 
 -- | Map a function then flatten to a list.
 --
@@ -205,8 +215,7 @@ flatMap ::
   (a -> List b)
   -> List a
   -> List b
-flatMap =
-  error "todo: Course.List#flatMap"
+flatMap f la = flatten (map f la)
 
 -- | Flatten a list of lists to a list (again).
 -- HOWEVER, this time use the /flatMap/ function that you just wrote.
@@ -215,8 +224,7 @@ flatMap =
 flattenAgain ::
   List (List a)
   -> List a
-flattenAgain =
-  error "todo: Course.List#flattenAgain"
+flattenAgain lla = flatMap id lla
 
 -- | Convert a list of optional values to an optional list of values.
 --
@@ -240,8 +248,15 @@ flattenAgain =
 seqOptional ::
   List (Optional a)
   -> Optional (List a)
-seqOptional =
-  error "todo: Course.List#seqOptional"
+seqOptional = 
+  foldRight (A.liftA2 (:.)) (Full Nil) 
+  -- case lo of
+  --   Nil -> Full Nil
+  --   l:.ls -> case l of
+  --     Empty -> Empty 
+  --     Full a -> case seqOptional ls of
+  --       Empty -> Empty
+  --       Full n -> Full (a :. n)
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -263,8 +278,17 @@ find ::
   (a -> Bool)
   -> List a
   -> Optional a
-find =
-  error "todo: Course.List#find"
+-- find a2b la = case la of
+--   Nil -> Empty
+--   l :. ls -> if a2b l then Full l else find a2b ls
+-- find a2b la = headOr Empty (map Full (filter a2b la))
+find a2b la = headMaybe (filter a2b la)
+-- List a -> Optional a (using head of List a) headMaybe
+
+headMaybe :: List a -> Optional a
+headMaybe la = case la of
+  Nil -> Empty 
+  l :. ls -> Full l
 
 -- | Determine if the length of the given list is greater than 4.
 --
@@ -282,8 +306,7 @@ find =
 lengthGT4 ::
   List a
   -> Bool
-lengthGT4 =
-  error "todo: Course.List#lengthGT4"
+lengthGT4 a = if length a > 4 then True else False
 
 -- | Reverse a list.
 --
@@ -299,8 +322,10 @@ lengthGT4 =
 reverse ::
   List a
   -> List a
-reverse =
-  error "todo: Course.List#reverse"
+-- reverse a = case a of
+--   Nil -> Nil
+--   n:.ns -> reverse ns ++ n:.Nil
+reverse = foldLeft (\ la x -> x :. la) Nil
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements
@@ -314,8 +339,9 @@ produce ::
   (a -> a)
   -> a
   -> List a
-produce f x =
-  error "todo: Course.List#produce"
+produce f x = x :. produce f (f x)
+  -- let inf fn xn = (fn xn) :. inf (fn xn)
+  -- in inf 0
 
 -- | Do anything other than reverse a list.
 -- Is it even possible?

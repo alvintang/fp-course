@@ -119,21 +119,29 @@ constantParser =
 -- True
 character ::
   Parser Char
-character =
-  error "todo: Course.Parser#character"
+character = P (\i -> case i of 
+  Nil -> UnexpectedEof
+  a :. la -> Result la a
+  )
+  -- error "todo: Course.Parser#character"
 
 -- | Parsers can map.
 -- Write a Functor instance for a @Parser@.
 --
 -- >>> parse (toUpper <$> character) "amz"
 -- Result >mz< 'A'
+-- parse ::
+--   Parser a
+--   -> Input
+--   -> ParseResult a
+
 instance Functor Parser where
   (<$>) ::
     (a -> b)
     -> Parser a
     -> Parser b
-  (<$>) =
-     error "todo: Course.Parser (<$>)#instance Parser"
+  (<$>) a2b pa = P(\i -> a2b <$> parse pa i)
+    --  error "todo: Course.Parser (<$>)#instance Parser"
 
 -- | Return a parser that always succeeds with the given value and consumes no input.
 --
@@ -142,8 +150,8 @@ instance Functor Parser where
 valueParser ::
   a
   -> Parser a
-valueParser =
-  error "todo: Course.Parser#valueParser"
+valueParser a = P(\i -> Result i a)
+  -- error "todo: Course.Parser#valueParser"
 
 -- | Return a parser that tries the first parser for a successful value.
 --
@@ -162,12 +170,21 @@ valueParser =
 --
 -- >>> parse (constantParser UnexpectedEof ||| valueParser 'v') "abc"
 -- Result >abc< 'v'
+--
+-- parse ::
+--   Parser a
+--   -> Input
+--   -> ParseResult a
+
 (|||) ::
   Parser a
   -> Parser a
   -> Parser a
-(|||) =
-  error "todo: Course.Parser#(|||)"
+(|||) pa1 pa2 = P(\i -> case parse pa1 i of
+  Result l a -> Result l a
+  _ -> parse pa2 i
+  ) 
+  -- error "todo: Course.Parser#(|||)"
 
 infixl 3 |||
 
@@ -198,9 +215,16 @@ instance Monad Parser where
     (a -> Parser b)
     -> Parser a
     -> Parser b
-  (=<<) =
-    error "todo: Course.Parser (=<<)#instance Parser"
+  (=<<) a2pb pa = P(\i -> case (parse pa i) of
+    Result l c -> parse (a2pb c) l
+    UnexpectedEof -> UnexpectedEof
+    ExpectedEof li -> ExpectedEof li
+    UnexpectedChar c -> UnexpectedChar c
+    UnexpectedString s -> UnexpectedString s
+    )
+    -- error "todo: Course.Parser (=<<)#instance Parser"
 
+-- START HERE
 -- | Write an Applicative functor instance for a @Parser@.
 -- /Tip:/ Use @(=<<)@.
 instance Applicative Parser where
@@ -213,8 +237,17 @@ instance Applicative Parser where
     Parser (a -> b)
     -> Parser a
     -> Parser b
-  (<*>) =
-    error "todo: Course.Parser (<*>)#instance Parser"
+  (<*>) = ap 
+    -- \a -> _) =<< pa
+    -- P(\i -> case parse pa2b i of
+    --   UnexpectedEof -> UnexpectedEof
+    --   ExpectedEof li -> ExpectedEof li
+    --   UnexpectedChar c -> UnexpectedChar c
+    --   UnexpectedString li -> UnexpectedString li
+    --   Result li fab -> parse ((valueParser . fab) =<< pa) li
+    --   -- Result li fab -> parse ((\a -> valueParser (fab a)) =<< pa) li
+    -- )
+    -- error "todo: Course.Parser (<*>)#instance Parser"
 
 -- | Return a parser that produces a character but fails if
 --
@@ -229,11 +262,35 @@ instance Applicative Parser where
 --
 -- >>> isErrorResult (parse (satisfy isUpper) "abc")
 -- True
+
+-- unexpectedCharParser ::
+--   Char
+--   -> Parser a
+-- unexpectedCharParser c =
+--   P (\_ -> UnexpectedChar c)
+-- character ::
+--   Parser Char
+-- character = P (\i -> case i of 
+--   Nil -> UnexpectedEof
+--   a :. la -> Result la a
+--   )
+
+--   Monad k =>
+--   k a
+--   -> (a -> k b)
+--   -> k b
+-- (>>=) ka a2kb = 
+--     join (a2kb <$> ka)
 satisfy ::
   (Char -> Bool)
   -> Parser Char
-satisfy =
-  error "todo: Course.Parser#satisfy"
+satisfy c2b = character >>= (\c -> if c2b c then valueParser c else unexpectedCharParser c)
+  -- P(\i -> case i of
+  --   Nil -> UnexpectedEof
+  --   c :. li -> if c2b c then parse (pure =<< pure c) li else parse (unexpectedCharParser =<< pure c) li
+  -- )
+
+  -- error "todo: Course.Parser#satisfy"
 
 -- | Return a parser that produces the given character but fails if
 --
@@ -244,8 +301,9 @@ satisfy =
 -- /Tip:/ Use the @satisfy@ function.
 is ::
   Char -> Parser Char
-is =
-  error "todo: Course.Parser#is"
+is c = satisfy (\cc -> c == cc)
+
+  -- error "todo: Course.Parser#is"
 
 -- | Return a parser that produces a character between '0' and '9' but fails if
 --
@@ -268,8 +326,8 @@ is =
 -- True
 digit ::
   Parser Char
-digit =
-  error "todo: Course.Parser#digit"
+digit = satisfy Data.Char.isDigit
+  -- error "todo: Course.Parser#digit"
 
 --
 -- | Return a parser that produces a space character but fails if
@@ -293,8 +351,8 @@ digit =
 -- True
 space ::
   Parser Char
-space =
-  error "todo: Course.Parser#space"
+space = satisfy Data.Char.isSpace
+  -- error "todo: Course.Parser#space"
 
 -- | Return a parser that conses the result of the first parser onto the result of
 -- the second. Pronounced "cons parser".
@@ -306,12 +364,22 @@ space =
 --
 -- >>> parse (digit .:. valueParser "hello") "321"
 -- Result >21< "3hello"
+
+-- lift2 ::
+--   Applicative k =>
+--   (a -> b -> c)
+--   -> k a
+--   -> k b
+--   -> k c
+-- lift2 a2b2c ka kb = a2b2c <$> ka <*> kb
+
 (.:.) ::
   Parser a
   -> Parser (List a)
   -> Parser (List a)
-(.:.) =
-  error "todo: Course.Parser#(.:.)"
+-- (.:.) pa pla = lift2 (\a la -> a :. la) pa pla
+(.:.) = lift2 (:.)
+  -- error "todo: Course.Parser#(.:.)"
 
 infixr 5 .:.
 
@@ -339,8 +407,16 @@ infixr 5 .:.
 list ::
   Parser a
   -> Parser (List a)
-list =
-  error "todo: Course.Parser#list"
+list pa = list1 pa ||| valueParser Nil
+  -- pa .:. list pa
+  -- P(\i -> case parse pa i of
+  -- UnexpectedEof -> UnexpectedEof
+  -- ExpectedEof li -> ExpectedEof li
+  -- UnexpectedChar c -> UnexpectedChar c
+  -- UnexpectedString li -> UnexpectedString li
+  -- Result li a -> a :. parse (pa) li
+  -- )
+  -- error "todo: Course.Parser#list"
 
 -- | Return a parser that produces at least one value from the given parser then
 -- continues producing a list of values from the given parser (to ultimately produce a non-empty list).
@@ -358,8 +434,8 @@ list =
 list1 ::
   Parser a
   -> Parser (List a)
-list1 =
-  error "todo: Course.Parser#list1"
+list1 pa = pa .:. list pa
+  -- error "todo: Course.Parser#list1"
 
 -- | Return a parser that produces one or more space characters
 -- (consuming until the first non-space) but fails if

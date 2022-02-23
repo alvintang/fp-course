@@ -23,29 +23,31 @@ data Optional a =
 --
 -- >>> mapOptional (+1) (Full 8)
 -- Full 9
-mapOptional ::
-  (a -> b)
-  -> Optional a
-  -> Optional b
-mapOptional =
-  error "todo: Course.Optional#mapOptional"
+-- mapOptional ::
+--   (a -> b)
+--   -> Optional a
+--   -> Optional b
+-- mapOptional a2b oa = case oa of
+--     Empty -> Empty
+--     Full a -> Full (a2b a)
 
--- | Bind the given function on the possible value.
---
--- >>> bindOptional Full Empty
--- Empty
---
--- >>> bindOptional (\n -> if even n then Full (n - 1) else Full (n + 1)) (Full 8)
--- Full 7
---
--- >>> bindOptional (\n -> if even n then Full (n - 1) else Full (n + 1)) (Full 9)
--- Full 10
-bindOptional ::
-  (a -> Optional b)
-  -> Optional a
-  -> Optional b
-bindOptional =
-  error "todo: Course.Optional#bindOptional"
+-- -- | Bind the given function on the possible value.
+-- --
+-- -- >>> bindOptional Full Empty
+-- -- Empty
+-- --
+-- -- >>> bindOptional (\n -> if even n then Full (n - 1) else Full (n + 1)) (Full 8)
+-- -- Full 7
+-- --
+-- -- >>> bindOptional (\n -> if even n then Full (n - 1) else Full (n + 1)) (Full 9)
+-- -- Full 10
+-- bindOptional ::
+--   (a -> Optional b)
+--   -> Optional a
+--   -> Optional b
+-- bindOptional = \a2ob -> \oa -> case oa of
+--     Empty -> Empty
+--     Full a -> a2ob a
 
 -- | Return the possible value if it exists; otherwise, the second argument.
 --
@@ -58,8 +60,9 @@ bindOptional =
   Optional a
   -> a
   -> a
-(??) =
-  error "todo: Course.Optional#(??)"
+(??) = \oa -> \a -> case oa of
+    Empty -> a
+    Full b -> b
 
 -- | Try the first optional for a value. If it has a value, use it; otherwise,
 -- use the second value.
@@ -79,8 +82,9 @@ bindOptional =
   Optional a
   -> Optional a
   -> Optional a
-(<+>) =
-  error "todo: Course.Optional#(<+>)"
+(<+>) = \oa -> \oa2 -> case oa of
+    Full a -> Full a
+    Empty -> oa2
 
 -- | Replaces the Full and Empty constructors in an optional.
 --
@@ -94,8 +98,25 @@ optional ::
   -> b
   -> Optional a
   -> b
-optional =
-  error "todo: Course.Optional#optional"
+optional = \a2b -> \b -> \oa -> case oa of
+    Empty -> b
+    Full a -> a2b a
+
+mapOptional ::
+  (a -> b)
+  -> Optional a
+  -> Optional b
+mapOptional a2b oa = case oa of
+    Empty -> Empty
+    Full a -> Full (a2b a)
+
+bindOptional ::
+  (a -> Optional b)
+  -> Optional a
+  -> Optional b
+bindOptional = \a2ob -> \oa -> case oa of
+    Empty -> Empty
+    Full a -> a2ob a
 
 applyOptional :: Optional (a -> b) -> Optional a -> Optional b
 applyOptional f a = bindOptional (\f' -> mapOptional f' a) f
